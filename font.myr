@@ -1,0 +1,50 @@
+use std
+use bio
+
+use "types"
+
+pkg draw =
+	const openfont	: (dpy : display#, name : byte[:] -> std.result(font#, err))
+;;
+
+const openfont = {dpy, name
+	match bio.open(name, bio.Rd)
+	| `std.Ok f:	-> load(dpy, f)
+	| `std.Err e:	-> `std.Err `Efont
+	;;
+}
+
+const load = {dpy, f
+	var sp : byte[:][3]
+	var lo, hi, start, n
+	var font, subf
+
+	font = std.zalloc()
+	match bio.readln(f)
+	| `bio.Ok ln:
+		std.bstrtok(sp[:2], ln)
+		font.height = std.getv(std.intparse(sp[0]), -1)
+		font.ascent = std.getv(std.intparse(sp[0]), -1)
+	| `bio.Eof:
+	| `bio.Err e:
+	;;
+
+	for ln in bio.byline(f)
+		n = 0
+		start = 0
+		std.bstrtok(sp[:3], ln)
+		lo = std.getv(std.intparse(sp[n++]), -1)
+		hi = std.getv(std.intparse(sp[n++]), -1)
+		if sp.len == 4
+			start = std.getv(std.intparse(sp[n++]), -1)
+		;;
+		subf = loadsubfont(sp[n], lo, hi, start)
+		std.slpush(&font.subf, subf)
+	;;
+	-> `std.Ok font
+}
+
+const loadsubfont = {name, lo, hi, start
+	std.put("load: {}\n", name)
+	-> std.zalloc()
+}

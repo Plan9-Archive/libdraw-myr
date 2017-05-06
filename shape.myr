@@ -1,0 +1,41 @@
+use std
+
+use "types"
+use "chan"
+use "pack"
+
+pkg draw =
+	const fill	: (dst : image#, src : image#, r : rect -> void)
+	const mdrawop	: (dst : image#, r : rect, s : image#, p0 : point, mask : image#, p1 : point, op : drawop -> void)
+	const inset	: (r : rect, off : int -> rect)
+;;
+
+const fill = {dst, src, r
+	// d dstid[4] srcid[4] maskid[4] dstr[4*4] srcp[2*4] maskp[2*4]
+	mdrawop(dst, r, src, Zp, dst.dpy.opaque, Zp, SoverD)
+}
+
+const mdrawop = {dst, r, src, p0, mask, p1, op
+	if op != SoverD
+		pack(dst.dpy, "bb", ('O' : byte), (op : byte))
+	;;
+	pack(dst.dpy, "biiiriiii", \
+		('d' : byte), /* draw */ \
+		dst.id, \
+		src.id, \
+		mask.id, \
+		r, \
+		p0.x, \
+		p0.y, \
+		p1.x, \
+		p1.y)
+
+}
+
+const inset = {r, off
+	r.x0 += off
+	r.y0 += off
+	r.x1 -= off
+	r.y1 -= off
+	-> r
+}

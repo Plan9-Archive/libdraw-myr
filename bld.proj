@@ -1,0 +1,20 @@
+lib draw =
+	draw.myr
+	types.myr
+	chan.myr
+	font.myr
+	load.myr
+	image.myr
+	pack.myr
+	shape.myr
+;;
+
+bin testdraw =
+	testdraw.myr
+	lib draw
+;;
+
+bin testload =
+	testload.myr
+	lib draw
+;;

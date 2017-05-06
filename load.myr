@@ -1,0 +1,140 @@
+use std
+use sys
+
+use "types"
+use "chan"
+
+pkg draw =
+	const readimage	: (fd : std.fd -> std.result(imagebuf#, err))
+//	const loadimage	: (fd : std.fd -> std.result(image#, err))
+	const mkimagebuf	: (chan : chan, rect : rect, buf : byte[:] -> imagebuf#)
+;;
+
+const readimage = {fd
+	var buf : byte[5*12]
+	var chan, rect
+
+	if !readall(fd, buf[:11])
+		-> `std.Err `Eio
+	;;
+
+
+	if std.sleq(buf[:11], "compressed\n")
+		if readall(fd, buf[:]) && parsehdr(buf[:], &chan, &rect)
+			-> readlz77(fd, chan, rect)
+		;;
+	else
+		if readall(fd, buf[11:]) && parsehdr(buf[:], &chan, &rect)
+			-> readraw(fd, chan, rect)
+		;;
+	;;
+	-> `std.Err `Efmt
+}
+
+const readlz77 = {fd, chan, rect
+//	var c, buf, sz
+//	var u, n
+//
+//	sz = chandepth(chan) * (rect.x1 - rect.x0) * (rect.y1 - rect.y0)
+//	match std.fslurp(fd)
+//	| `std.Ok r:	c = r
+//	| `std.Err e:	-> `std.Err `Eio
+//	;;
+//
+//	buf = std.slalloc((sz : std.size))
+//	for var i = 0; i < c.len; i++
+//		if c[i] & 0x80
+//			n = (c & 0x7f) + 1
+//			if i + n >= c.len
+//				goto err
+//			;;
+//		else
+//		;;
+//	;;
+//
+//	-> `std.Ok mkimgbuf(chan, rect, buf)
+//:err
+//	std.slfree(buf)
+//	std.slfree(c)
+	-> `std.Err `Efmt
+}
+
+
+const readraw = {fd, chan, rect
+	var buf, sz, by2pix
+
+	match std.fslurp(fd)
+	| `std.Ok b:	buf = b
+	| `std.Err e:	-> `std.Err `Eio
+	;;
+
+	by2pix = chandepth(chan) / 8
+	sz = (by2pix : int) * (rect.x1 - rect.x0) * (rect.y1 - rect.y0)
+	if buf.len != sz
+		std.put("len: {}, by2pix: {}, r: {}\n", sz, by2pix, rect)
+		std.slfree(buf)
+		-> `std.Err `Efmt
+	;;
+	-> `std.Ok mkimagebuf(chan, rect, buf)
+}
+
+const parsehdr = {buf, chanp, rectp
+	var spbuf : byte[:][5]
+	var sp
+
+	sp = std.bstrtok(spbuf[:], buf)
+	if sp.len == 0
+		-> false
+	;;
+
+	match chanparse(sp[0])
+	| `std.Some c:	chanp# = c
+	| `std.None:	-> false
+	;;
+
+	match std.intparse(sp[1])
+	| `std.Some x0:	rectp.x0 = x0
+	| `std.None:	-> false
+	;;
+
+	match std.intparse(sp[2])
+	| `std.Some y0:	rectp.y0 = y0
+	| `std.None:	-> false
+	;;
+
+	match std.intparse(sp[3])
+	| `std.Some x1:	rectp.x1 = x1
+	| `std.None:	-> false
+	;;
+
+	match std.intparse(sp[4])
+	| `std.Some y1:	rectp.y1 = y1
+	| `std.None:	-> false
+	;;
+	-> true
+}
+
+const readall = {fd, buf
+	var n
+
+	n = 0
+	while n < buf.len
+		match std.read(fd, buf[n:])
+		| `std.Err e:	-> false
+		| `std.Ok 0:	-> n == buf.len
+		| `std.Ok l:
+			n += l
+			std.put("buf[:{}]: {}\n", n, buf[:n])
+		;;
+	;;
+	std.put("read all. buf: {e}\n", buf)
+	-> true
+}
+
+const mkimagebuf = {chan, rect, buf
+	-> std.mk([
+		.chan=chan,
+		.rect=rect,
+		.buf=buf
+	])
+}

@@ -1,0 +1,170 @@
+use std
+use sys
+
+use "types"
+use "chan"
+use "pack"
+
+pkg draw =
+	const Ninfo
+	const Infosz
+
+	const namedimage	: (dpy : display#, name : byte[:] -> std.result(image#, err))
+	const parseimgfmt	: (img : image#, buf : byte[:][:] -> std.result(image#, err))
+	const allocimage	: (dpy : display#, r : rect, bg : color, repl : bool -> image#)
+	const allocscreen	: (dpy : display#, img : image#, fill : image#, public : bool -> screen#)
+	const allocwindow	: (dpy : display#, r : rect -> std.result(image#, err))
+
+	/* general versions */
+	const genallocimage	: (dpy : display#, \
+					screenid : int32, \
+					refr : refresh, \
+					chan : chan, \
+					color : color, \
+					repl : bool, \
+					r : rect, \
+					clipr : rect \
+					-> image#)
+;;
+
+const Ninfo	= 12
+const Infosz	= 12
+
+const Ctldir	= 0
+const Imgid	= 1
+const Chan	= 2
+const Repl	= 3
+const Scrx0	= 4
+const Scry0	= 5
+const Scrx1	= 6
+const Scry1	= 7
+const Clipx0	= 8
+const Clipy0	= 9
+const Clipx1	= 10
+const Clipy1	= 11
+
+const namedimage = {dpy, name
+	var info : byte[:][Ninfo]
+	var buf	: byte[12*Ninfo]
+	var img, id //, n, chan
+
+	if name.len > 256
+		-> `std.Err `Ename
+	;;
+	flush(dpy)
+	id = dpy.imageid++
+	pack(dpy, "biS", \
+		('n' : byte), \
+		id, \
+		name)
+	flush(dpy)
+
+	if sys.pread((dpy.ctlfd : sys.fd), buf[:], 0) == -1
+		-> `std.Err `Eimg
+	;;
+	if std.bstrtok(info[:], buf[:]).len != Ninfo
+		-> `std.Err `Edpy
+	;;
+	img = std.zalloc()
+	img.dpy = dpy
+	img.id = id
+	parseimgfmt(img, info[:])
+	-> `std.Ok img
+}
+
+const genallocimage = {dpy, screenid, refr, chan, color, repl, r, clipr
+	var img
+
+	img = std.zalloc()
+	img.dpy = dpy
+	img.chan = chan
+	img.repl = repl
+	img.refresh = refr
+	img.clipr = clipr
+	img.color = color
+	img.r = r
+	img.id = dpy.imageid++
+
+	pack(dpy, "biibibrri", \
+		('b' : byte), \
+		img.id, \
+		screenid, \
+		(refr : byte), \
+		chan, \
+		(repl : byte), \
+		r, \
+		clipr, \
+		color)
+
+	-> img
+}
+
+const allocimage = {dpy, r, color, repl
+	var clipr
+
+	if repl
+		clipr = [.x0=-0x3FFFFFFF, .y0=-0x3FFFFFFF, .x1=0x3FFFFFFF, .y1=0x3FFFFFFF]
+	else
+		clipr = r
+	;;
+	-> genallocimage(dpy, dpy.screen.id, Refnone, dpy.root.chan, color, repl, r, clipr)
+}
+
+const allocscreen = {dpy, img, fill, public
+	var scr
+
+	scr = std.zalloc()
+	scr.id = dpy.scrid++
+	scr.store = img
+	scr.fill = fill
+
+	pack(dpy, "biiib", \
+		('A' : byte), \
+		scr.id, \
+		scr.store.id, \
+		scr.fill.id, \
+		(public : byte))
+
+	-> scr
+}
+
+const allocwindow = {scr, r
+	-> `std.Err `Edpy
+}
+
+
+const parseimgfmt = {img, info
+	var err
+
+	err = false
+	match chanparse(info[Chan])
+	| `std.Some c:
+		img.chan = c
+		img.depth = chandepth(img.chan)
+	| `std.None:	-> `std.Err `Edpy
+	;;
+	
+	img.repl = std.sleq("1", std.strstrip(info[Repl]))
+//	img.id = getint(info[Imgid], &err)
+	img.r.x0 = getint(info[Scrx0], &err)
+	img.r.y0 = getint(info[Scry0], &err)
+	img.r.x1 = getint(info[Scrx1], &err)
+	img.r.y1 = getint(info[Scry1], &err)
+	img.clipr.x0 = getint(info[Clipx0], &err)
+	img.clipr.y0 = getint(info[Clipy0], &err)
+	img.clipr.x1 = getint(info[Clipx1], &err)
+	img.clipr.y1 = getint(info[Clipy1], &err)
+	if err
+		-> `std.Err `Edpy
+	;;
+	-> `std.Ok img
+}
+
+generic getint = {str, errp -> @a::(integral,numeric)
+	match std.intparse(str)
+	| `std.Some n:	-> n
+	| `std.None:	errp# = true
+	;;
+	-> 0
+}
+

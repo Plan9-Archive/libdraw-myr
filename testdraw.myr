@@ -1,0 +1,28 @@
+use std
+use draw
+
+const main = {
+	var b : byte[0]
+
+	match draw.open()
+	| `std.Err e:	std.fatal("error: {}\n", e)
+	| `std.Ok dpy:
+		std.put("{}\n", std.getpid())
+		std.put("root.r: {}\n", dpy.root.r)
+		draw.flush(dpy)
+		//draw.getwindow(dpy, draw.Refnone)
+		testpattern(dpy)
+		draw.flush(dpy)
+		std.read(std.In, b[:])
+		draw.close(dpy)
+	;;
+}
+
+const testpattern = {dpy
+	var w, r
+
+	w = dpy.win
+	r = [.x0=w.r.x0+100, .y0=w.r.y0+100, .x1=w.r.x0+200, .y1=w.r.y0+200]
+	std.put("rect: {}\n", r)
+	draw.fill(w, dpy.black, r)
+}

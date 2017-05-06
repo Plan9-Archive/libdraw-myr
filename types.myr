@@ -1,0 +1,151 @@
+use std
+
+pkg draw =
+	type chan = uint32
+	type color = uint32
+	type refresh = uint32
+	type drawop = uint32
+
+	type display = struct
+		fd	: std.fd
+		ctlfd	: std.fd
+		refrfd	: std.fd
+		ctldir	: int
+		windir	: byte[:]
+
+		imageid	: int32
+		scrid	: int32
+
+		root	: image#
+		win	: image#
+		screen	: screen#
+		dfont	: font#
+		buf	: byte[:]
+		bufoff	: std.size
+
+		white	: image#
+		black	: image#
+		opaque	: image#
+	;;
+
+	type err = union
+		`Edpy
+		`Efont
+		`Ewin
+		`Ename
+		`Enamelen
+		`Eimg
+		`Eio
+		`Efmt
+	;;
+
+	type font = struct
+		name	: byte[:]
+		height	: int
+		ascent	: int
+		subf	: subfont#[:]
+	;;
+
+	type subfont = struct
+		lo	: char
+		hi	: char
+		start	: std.size
+		img	: image#
+	;;
+
+	type screen = struct
+		dpy	: display#
+		id	: int32
+		store	: image#
+		fill	: image#
+	;;
+
+	type image = struct
+		dpy	: display#
+		chan	: chan
+		color	: color
+		refresh	: refresh
+		depth	: uint32
+		id	: int32
+		r	: rect
+		clipr	: rect
+		repl	: bool
+	;;
+
+	type imagebuf = struct
+		chan	: chan
+		rect	: rect
+		buf	: byte[:]
+	;;
+
+	type rect = struct
+		x0	: int
+		x1	: int
+		y0	: int
+		y1	: int
+	;;
+
+	type point = struct
+		x	: int
+		y	: int
+	;;
+
+	const Zp	: point = [.x=0, .y=0]
+	const Dfont	: byte[:] = "/lib/font/bit/vga/unicode.font"
+
+	/* Porter-Duff compositing operators */
+	const Clear	: drawop = 0
+	const SinD	: drawop = 8
+	const DinS	: drawop = 4
+	const SoutD	: drawop = 2
+	const DoutS	: drawop = 1
+
+	const S		: drawop = SinD|SoutD
+	const SoverD	: drawop = SinD|SoutD|DoutS
+	const SatopD	: drawop = SinD|DoutS
+	const SxorD	: drawop = SoutD|DoutS
+
+	const D		: drawop = DinS|DoutS
+	const DoverS	: drawop = DinS|DoutS|SoutD
+	const DatopS	: drawop = DinS|SoutD
+	const DxorS	: drawop = DoutS|SoutD	/* == SxorD */
+
+	/* refresh methods */
+	const Refbackup	: refresh = 0
+	const Refnone	: refresh = 1
+	const Refmesg	: refresh = 2
+
+	/* colors */
+	const DOpaque		: color =  0xFFFFFFFF
+	const DTransparent	: color =  0x00000000	/* only useful for allocimage, memfillcolor */
+	const DBlack		: color =  0x000000FF
+	const DWhite		: color =  0xFFFFFFFF
+	const DRed		: color =  0xFF0000FF
+	const DGreen		: color =  0x00FF00FF
+	const DBlue		: color =  0x0000FFFF
+	const DCyan		: color =  0x00FFFFFF
+	const DMagenta		: color =  0xFF00FFFF
+	const DYellow		: color =  0xFFFF00FF
+	const DPaleyellow	: color =  0xFFFFAAFF
+	const DDarkyellow	: color =  0xEEEE9EFF
+	const DDarkgreen	: color =  0x448844FF
+	const DPalegreen	: color =  0xAAFFAAFF
+	const DMedgreen		: color =  0x88CC88FF
+	const DDarkblue		: color =  0x000055FF
+	const DPalebluegreen	: color =  0xAAFFFFFF
+	const DPaleblue		: color =  0x0000BBFF
+	const DBluegreen	: color =  0x008888FF
+	const DGreygreen	: color =  0x55AAAAFF
+	const DPalegreygreen	: color =  0x9EEEEEFF
+	const DYellowgreen	: color =  0x99994CFF
+	const DMedblue		: color =  0x000099FF
+	const DGreyblue		: color =  0x005DBBFF
+	const DPalegreyblue	: color =  0x4993DDFF
+	const DPurpleblue	: color =  0x8888CCFF
+
+	const DNotacolor	: color =  0xFFFFFF00
+	const DNofill		: color =  DNotacolor
+
+	const Borderwidth	: int	= 4
+
+;;

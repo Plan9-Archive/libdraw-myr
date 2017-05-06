@@ -1,0 +1,163 @@
+use std
+
+use "types"
+use "chan"
+use "font"
+use "image"
+use "pack"
+use "shape"
+
+pkg draw =
+	const open	: (-> std.result(display#, err))
+	const close	: (dpy : display# -> void)
+;;
+
+const open = {
+	var infobuf : byte[12*12] /* 12 infos, 12 bytes each */
+	var r, clipr, font
+	var dpy
+
+	/* connect */
+	dpy = std.zalloc()
+	dpy.imageid = 1
+	dpy.scrid = 1
+	dpy.ctlfd = std.try(std.open("/dev/draw/new", std.Ordwr | std.Ocexec))
+	match std.read(dpy.ctlfd, infobuf[:])
+	| `std.Err e:	-> `std.Err `Edpy
+	| `std.Ok 0:	-> `std.Err `Edpy
+	| `std.Ok n:	
+		match parseinfo(dpy, infobuf[:n])
+		| `std.Ok void:
+		| `std.Err e: -> `std.Err e
+		;;
+	;;
+
+	/* set up default images */
+	r = [.x0=0, .y0=0,.x1=1,.y1=1]
+	clipr = [.x0=-0x3FFFFFFF, .y0=-0x3FFFFFFF, .x1=0x3FFFFFFF, .y1=0x3FFFFFFF]
+	dpy.black = genallocimage(dpy, 0, Refnone, dpy.root.chan, DBlack, true, r, clipr)
+	dpy.white = genallocimage(dpy, 0, Refnone, dpy.root.chan, DWhite, true, r, clipr)
+	dpy.opaque = genallocimage(dpy, 0, Refnone, dpy.root.chan, DOpaque, true, r, clipr)
+	match getwindow(dpy, Refnone)
+	| `std.Ok win:	dpy.win = win
+	| `std.Err e:	-> `std.Err e
+	;;
+
+	/* load up fonts */
+	font = std.getenvv("font", Dfont)
+	match openfont(dpy, font)
+	| `std.Ok ft:	dpy.dfont = ft
+	| `std.Err e:	-> `std.Err e
+	;;
+
+	-> `std.Ok dpy
+}
+
+const parseinfo = {dpy, infobuf
+	var info : byte[:][Ninfo]
+	var buf	: byte[12*Ninfo]
+	var p
+
+	if std.bstrtok(info[:], infobuf).len != Ninfo
+		-> `std.Err `Edpy
+	;;
+	p = std.bfmt(buf[:], "/dev/draw/{}/data", info[0])
+	dpy.fd = std.try(std.open(p, std.Ordwr | std.Ocexec))
+	p = std.bfmt(buf[:], "/dev/draw/{}/refresh", info[0])
+	dpy.refrfd = std.try(std.open(p, std.Ordwr | std.Ocexec))
+
+	/* parse out root image properties */
+	dpy.ctldir = std.get(std.intparse(info[0]))
+	dpy.buf = std.slalloc(iounit(dpy.fd) + 5)	/* slop for flush */
+	dpy.root = std.zalloc()
+	parseimgfmt(dpy.root, info[:])
+
+	-> `std.Ok void
+}
+
+const initfont = {dpy
+	var font
+
+	font = std.getenvv("font", "/lib/font/bit/vga/unicode.font")
+	match openfont(dpy, font)
+	| `std.Err e:	-> `std.Err `Efont
+	| `std.Ok f:
+		dpy.dfont = f
+		-> `std.Ok void
+	;;
+}
+	
+const getwindow = {dpy, ref
+	var obuf : byte[128], buf : byte[128]
+	var on, fd, img, win
+	var r
+
+	on = 0
+:retry
+	match std.open("/dev/winname", std.Ordonly)
+	| `std.Ok f:	fd = f
+	| `std.Err e:	-> `std.Err `Ewin
+	;;
+
+	match std.read(fd, buf[:])
+	| `std.Err e:
+		-> `std.Err `Edpy
+	| `std.Ok n:
+		match namedimage(dpy, buf[:n])
+		| `std.Ok i:
+			img = i
+		| `std.Err e:
+			/*
+			 * theres a race where the winname can change after
+			 * we read it, so keep trying as long as the name
+			 * keeps changing.
+			 */
+			if !std.sleq(buf[:n], obuf[:on])
+				std.close(fd)
+				std.slcp(obuf[:n], buf[:n])
+				on = n
+				goto retry
+			;;
+		;;
+	;;
+	r = inset(img.r, Borderwidth)
+	dpy.screen = allocscreen(dpy, img, dpy.white, false)
+	win = allocimage(dpy, r, DWhite, false)
+	if flush(dpy)
+		-> `std.Ok win
+	else
+		-> `std.Err `Edpy
+	;;
+}
+
+const close = {dpy
+//	freescreen(dpy.screen)
+//	freeimage(dpy.root)
+	std.slfree(dpy.buf)
+	std.close(dpy.ctlfd)
+	std.close(dpy.refrfd)
+	std.close(dpy.fd)
+	std.free(dpy)
+}
+
+/*
+Format:  3 r  M    4 (0000000000457def 11 00)   8192      512 /rc/lib/rcmain
+ */
+const iounit = {fd
+	var args : byte[:][10]
+	var buf : byte[128]
+	var cfd, ret
+	var path
+
+	path = std.bfmt(buf[:], "#d/{}ctl", fd)
+	cfd = std.try(std.open(path, std.Ordonly))
+	match std.read(cfd,buf[:])
+	| `std.Ok n:
+		std.bstrtok(args[:], buf[:n])
+		ret = std.get(std.intparse(args[7]))
+	| `std.Err e:
+		ret = -1
+	;;
+	std.close(cfd);
+	-> ret
+}

@@ -1,0 +1,83 @@
+use std
+use "types"
+
+pkg draw =
+	pkglocal const chanparse	: (str : byte[:] -> std.option(chan))
+	pkglocal const chanfmt	: (buf : byte[:], chan : chan -> byte[:])
+	pkglocal const chandepth	: (chan : chan -> uint32)
+;;
+
+var channames = "rgbkamx"
+
+const chanparse = {str
+	var c, n, chan, depth
+
+	str = std.strstrip(str)
+	depth = 0
+	chan = 0
+	for var i = 0; i < str.len - 1; i += 2
+		if std.isspace((str[i] : char))
+			break
+		;;
+		match std.strfind(channames, str[i:i+1])
+		| `std.None:	-> `std.None
+		| `std.Some ty:
+			c = (str[i + 1] : char)
+			n = std.charval(c, 10)
+			if n < 0
+				-> `std.None
+			;;
+			depth += n
+			chan <<= 8
+			chan |= dc((ty : uint32), n)
+		;;
+	;;
+
+	if depth==0 || (depth>8 && depth%8 != 0) || (depth<8 && 8%depth != 0)
+		-> `std.None
+	;;
+	-> `std.Some chan
+}
+
+const chanfmt = {buf, chan
+	var c, name, rc, i
+
+	rc = 0
+	for c = chan; c != 0; c >>= 8
+		rc <<= 8
+		rc |= c & 0xff
+	;;
+
+	i = 0
+	for c = rc; c != 0; c >>= 8
+		name = std.decode(channames[ctype(c & 0xff):])
+		std.bfmt(buf[i:i+2], "{}{}", name, cdepth(c & 0xff))
+		i += 2
+	;;
+	-> buf[:i]
+}
+
+const chandepth = {chan
+	var depth
+
+	depth = 0
+	for var c = chan; c != 0; c >>= 8
+		depth += cdepth(c)
+	;;
+	if depth==0 || (depth>8 && depth%8 != 0)  || (depth<8 && 8%depth != 0)
+		-> 0
+	;;
+	-> depth
+}
+
+const dc = {ty, nbit
+	-> (((ty & 15) << 4) | (nbit & 15) : chan)
+}
+
+const ctype = {c
+	-> ((c & 0xf0) >> 4 : uint32)
+}
+
+const cdepth = {c
+	-> (c & 0xf : uint32)
+}

@@ -1,0 +1,83 @@
+use std
+
+use "types"
+
+pkg draw =
+	const pack	: (dpy : display#, fmt : byte[:], args : ... -> void)
+	const flush	: (dpy : display# -> bool)
+	const flushbuf	: (dpy : display# -> bool)
+;;
+
+const pack = {dpy, fmt, args
+	var ap
+	var b
+
+	ap = std.vastart(&args)
+	for c in fmt
+		match (c : char)
+		| 'b':
+			b = ensure(dpy, 1)
+			b[0] = std.vanext(&ap)
+		| 's':
+			var v : int16 = std.vanext(&ap)
+			b = ensure(dpy, 2)
+			std.putle16(b[:2], v)
+		| 'i':
+			var v : int32 = std.vanext(&ap)
+			b = ensure(dpy, 4)
+			std.putle32(b[:4], v)
+		| 'r':
+			var r : rect = std.vanext(&ap)
+			b = ensure(dpy, 4*4)
+			std.putle32(b[ 0: 4], r.x0)
+			std.putle32(b[ 4: 8], r.y0)
+			std.putle32(b[ 8:12], r.x1)
+			std.putle32(b[12:16], r.y1)
+		| 'S':
+			var s : byte[:] = std.vanext(&ap)
+			b = ensure(dpy, s.len + 1)
+			b[0] = (s.len : byte)
+			std.slcp(b[1:s.len+1], s)
+		| ' ':
+			/* for readability of format strings */
+		| chr:
+			std.fatal("unknown specifier {} in pack\n", chr)
+		;;
+	;;
+}
+
+const ensure = {dpy, sz
+	var ret
+
+	if dpy.bufoff + sz > dpy.buf.len
+		flush(dpy)
+	;;
+	ret = dpy.buf[dpy.bufoff:dpy.bufoff + sz]
+	dpy.bufoff += sz
+	-> ret
+}
+
+const flush = {dpy
+
+	/* five bytes always reserved here */
+	dpy.buf[dpy.bufoff++] = ('v' : byte)
+	-> flushbuf(dpy)
+}
+		
+const flushbuf = {dpy
+	var off, ret
+
+	off = 0
+	ret = true
+	while off != dpy.bufoff
+		match std.write(dpy.fd, dpy.buf[off:dpy.bufoff])
+		| `std.Ok n:	off += n
+		| `std.Err e:
+			std.put("**error\n")
+			ret = false
+			break
+		;;
+	;;
+	dpy.bufoff = 0
+	-> true
+}
