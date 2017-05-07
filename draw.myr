@@ -20,7 +20,7 @@ const open = {
 	/* connect */
 	dpy = std.zalloc()
 	dpy.imageid = 1
-	dpy.scrid = 1
+	dpy.scrid = (std.getpid() : int32)
 	dpy.ctlfd = std.try(std.open("/dev/draw/new", std.Ordwr | std.Ocexec))
 	match std.read(dpy.ctlfd, infobuf[:])
 	| `std.Err e:	-> `std.Err `Edpy

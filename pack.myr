@@ -3,47 +3,70 @@ use std
 use "types"
 
 pkg draw =
-	const pack	: (dpy : display#, fmt : byte[:], args : ... -> void)
+	const pack	: (dpy : display#, fmt : byte[:], vsz,  args : ... -> void)
 	const flush	: (dpy : display# -> bool)
 	const flushbuf	: (dpy : display# -> bool)
 ;;
 
-const pack = {dpy, fmt, args
+const pack = {dpy, fmt, vsz, args
 	var ap
-	var b
+	var sz, b, o
 
 	ap = std.vastart(&args)
+	sz = fixsize(fmt) + vsz
+	b = ensure(dpy, sz)
+	o = 0
 	for c in fmt
 		match (c : char)
 		| 'b':
-			b = ensure(dpy, 1)
-			b[0] = std.vanext(&ap)
+			b[o] = std.vanext(&ap)
+			o += 1
 		| 's':
 			var v : int16 = std.vanext(&ap)
-			b = ensure(dpy, 2)
-			std.putle16(b[:2], v)
+			std.putle16(b[o:o+2], v)
+			o += 2
 		| 'i':
 			var v : int32 = std.vanext(&ap)
-			b = ensure(dpy, 4)
-			std.putle32(b[:4], v)
+			std.putle32(b[o:o+4], v)
+			o += 4
 		| 'r':
 			var r : rect = std.vanext(&ap)
-			b = ensure(dpy, 4*4)
-			std.putle32(b[ 0: 4], r.x0)
-			std.putle32(b[ 4: 8], r.y0)
-			std.putle32(b[ 8:12], r.x1)
-			std.putle32(b[12:16], r.y1)
+			std.putle32(b[o+ 0:o+ 4], r.x0)
+			std.putle32(b[o+ 4:o+ 8], r.y0)
+			std.putle32(b[o+ 8:o+12], r.x1)
+			std.putle32(b[o+12:o+16], r.y1)
+			o += 4*4
 		| 'S':
 			var s : byte[:] = std.vanext(&ap)
-			b = ensure(dpy, s.len + 1)
-			b[0] = (s.len : byte)
-			std.slcp(b[1:s.len+1], s)
+			b[o] = (s.len : byte)
+			std.slcp(b[o+1:o+s.len+1], s)
+			o += s.len + 1
+		| 'd':
+			var d : byte[:] = std.vanext(&ap)
+			std.slcp(b[o:o+d.len], d)
+			o += d.len
 		| ' ':
 			/* for readability of format strings */
 		| chr:
 			std.fatal("unknown specifier {} in pack\n", chr)
 		;;
 	;;
+}
+
+const fixsize = {fmt
+	var sz
+
+	sz = 0
+	for c in fmt
+		match (c : char)
+		| 'b':	sz += 1
+		| 's':	sz += 2
+		| 'i':	sz += 4
+		| 'r':	sz += 4*4
+		| _:	/* variable sizes */
+		;;
+	;;
+	-> sz
 }
 
 const ensure = {dpy, sz

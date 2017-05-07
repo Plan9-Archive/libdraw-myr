@@ -6,6 +6,8 @@ use "pack"
 
 pkg draw =
 	const fill	: (dst : image#, src : image#, r : rect -> void)
+	const draw	: (dst : image#, r : rect, src : image#, p0 : point -> void)
+	const drawop	: (dst : image#, r : rect, src : image#, p0 : point, op : drawop -> void)
 	const mdrawop	: (dst : image#, r : rect, s : image#, p0 : point, mask : image#, p1 : point, op : drawop -> void)
 	const inset	: (r : rect, off : int -> rect)
 ;;
@@ -15,11 +17,19 @@ const fill = {dst, src, r
 	mdrawop(dst, r, src, Zp, dst.dpy.opaque, Zp, SoverD)
 }
 
+const draw = {dst, r, src, p0
+	mdrawop(dst, r, src, p0, dst.dpy.opaque, Zp, SoverD)
+}
+
+const drawop = {dst, r, src, p0, op
+	mdrawop(dst, r, src, p0, dst.dpy.opaque, Zp, SoverD)
+}
+
 const mdrawop = {dst, r, src, p0, mask, p1, op
 	if op != SoverD
-		pack(dst.dpy, "bb", ('O' : byte), (op : byte))
+		pack(dst.dpy, "bb", 0, ('O' : byte), (op : byte))
 	;;
-	pack(dst.dpy, "biiiriiii", \
+	pack(dst.dpy, "biiiriiii", 0, \
 		('d' : byte), /* draw */ \
 		dst.id, \
 		src.id, \

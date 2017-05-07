@@ -25,6 +25,8 @@ pkg draw =
 					r : rect, \
 					clipr : rect \
 					-> image#)
+
+	pkglocal generic getint	: (str : byte[:], errp : bool# -> @a::(integral,numeric))
 ;;
 
 const Ninfo	= 12
@@ -53,7 +55,7 @@ const namedimage = {dpy, name
 	;;
 	flush(dpy)
 	id = dpy.imageid++
-	pack(dpy, "biS", \
+	pack(dpy, "biS", name.len + 1, \
 		('n' : byte), \
 		id, \
 		name)
@@ -85,7 +87,7 @@ const genallocimage = {dpy, screenid, refr, chan, color, repl, r, clipr
 	img.r = r
 	img.id = dpy.imageid++
 
-	pack(dpy, "biibibrri", \
+	pack(dpy, "biibibrri", 0, \
 		('b' : byte), \
 		img.id, \
 		screenid, \
@@ -114,16 +116,21 @@ const allocscreen = {dpy, img, fill, public
 	var scr
 
 	scr = std.zalloc()
-	scr.id = dpy.scrid++
 	scr.store = img
 	scr.fill = fill
 
-	pack(dpy, "biiib", \
-		('A' : byte), \
-		scr.id, \
-		scr.store.id, \
-		scr.fill.id, \
-		(public : byte))
+	for var i = 0; i < 30; i++
+		scr.id = dpy.scrid++
+		pack(dpy, "biiib", 0, \
+			('A' : byte), \
+			scr.id, \
+			scr.store.id, \
+			scr.fill.id, \
+			(public : byte))
+		if flushbuf(dpy)
+			break
+		;;
+	;;
 
 	-> scr
 }

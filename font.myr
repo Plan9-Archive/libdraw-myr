@@ -45,6 +45,5 @@ const load = {dpy, f
 }
 
 const loadsubfont = {name, lo, hi, start
-	std.put("load: {}\n", name)
 	-> std.zalloc()
 }

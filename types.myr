@@ -72,12 +72,6 @@ pkg draw =
 		repl	: bool
 	;;
 
-	type imagebuf = struct
-		chan	: chan
-		rect	: rect
-		buf	: byte[:]
-	;;
-
 	type rect = struct
 		x0	: int
 		x1	: int
