@@ -168,7 +168,7 @@ const parseimgfmt = {img, info
 }
 
 generic getint = {str, errp -> @a::(integral,numeric)
-	match std.intparse(str)
+	match std.intparse(std.strstrip(str))
 	| `std.Some n:	-> n
 	| `std.None:	errp# = true
 	;;

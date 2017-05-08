@@ -18,7 +18,7 @@ const load = {dpy, buf
 		-> `std.Err `Efmt
 	;;
 
-	img = allocimage(dpy, rect, DWhite, false)
+	img =  genallocimage(dpy, 0, Refnone, chan, DWhite, false, rect, rect)
 	if compressed
 		if !loadcomp(dpy, img, buf)
 			-> `std.Err `Efmt
@@ -32,7 +32,31 @@ const load = {dpy, buf
 }
 
 const loadcomp = {dpy, img, buf
-	-> false
+	var n, y, dy, err
+
+	y = img.r.y0
+	while y != img.r.y1
+		if buf.len < 24
+			-> false
+		;;
+		err = false
+		dy = getint(buf[:12], &err)
+		n = getint(buf[12:24], &err)
+		if err
+			-> false
+		;;
+		buf = buf[24:]
+		pack(dpy, "biiiiid", (n : std.size), \
+			('Y' : byte), \
+			img.id, \
+			img.r.x0, \
+			y, \
+			img.r.x1, \
+			y + dy, \
+			buf[:n])
+		y += dy
+	;;
+	-> true
 }
 
 const loadraw = {dpy, img, buf
@@ -46,6 +70,7 @@ const loadraw = {dpy, img, buf
 	chunk = dpy.buf.len - 64
 	while r.y0 != r.y1
 		dy = r.y1 - r.y0
+		/* FIXME: deal with images where btl > chunk */
 		if dy * btl > chunk
 			dy = chunk / btl
 		;;
@@ -71,7 +96,7 @@ const parsehdr = {buf, chanp, rectp, compressedp, bufp
 	if std.sleq(buf[:11], "compressed\n") && buf.len >= 5*12 + 11
 		compressedp# = true
 		bufp# = buf[5*12 + 11:]
-		-> parsefmt(buf[:11+5*12], chanp, rectp)
+		-> parsefmt(buf[11:11+5*12], chanp, rectp)
 	else
 		compressedp# = false
 		bufp# = buf[5*12:]
@@ -90,7 +115,7 @@ const parsefmt = {buf, chanp, rectp
 
 	match chanparse(sp[0])
 	| `std.Some c:	chanp# = c
-	| `std.None:	-> false
+	| `std.None:	std.fatal("bad chan\n"); -> false
 	;;
 
 	err = false
@@ -112,10 +137,8 @@ const readall = {fd, buf
 		| `std.Ok 0:	-> n == buf.len
 		| `std.Ok l:
 			n += l
-			std.put("buf[:{}]: {}\n", n, buf[:n])
 		;;
 	;;
-	std.put("read all. buf: {e}\n", buf)
 	-> true
 }
 */
