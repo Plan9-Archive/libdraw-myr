@@ -8,11 +8,25 @@ use "pack"
 
 pkg draw =
 	const load	: (dpy : display#, buf : byte[:] -> std.result(image#, err))
+	const xload	: (dpy : display#, buf : byte[:] -> std.result((image#, std.size), err))
 ;;
 
 const load = {dpy, buf
+	match xload(dpy, buf)
+	| `std.Ok (img, n):
+		if n != buf.len
+			// freeimg(img)
+			-> `std.Err `Efmt
+		;;
+		-> `std.Ok img
+	| `std.Err e:
+		-> `std.Err e
+	;;
+}
+
+const xload = {dpy, buf
 	var chan, rect, compressed
-	var img
+	var n, img
 
 	if !parsehdr(buf, &chan, &rect, &compressed, &buf)
 		-> `std.Err `Efmt
@@ -20,49 +34,57 @@ const load = {dpy, buf
 
 	img =  genallocimage(dpy, 0, Refnone, chan, DWhite, false, rect, rect)
 	if compressed
-		if !loadcomp(dpy, img, buf)
-			-> `std.Err `Efmt
-		;;
+		n = 5*12 + 11
+		n += loadcomp(dpy, img, buf)
 	else
-		if !loadraw(dpy, img, buf)
-			-> `std.Err `Efmt
-		;;
+		n = 5*12
+		n += loadraw(dpy, img, buf)
 	;;
-	-> `std.Ok img
+	if n > 0
+		-> `std.Ok (img, n)
+	else
+		// freeimg(img)
+		-> `std.Err `Efmt
+	;;
 }
 
 const loadcomp = {dpy, img, buf
-	var n, y, dy, err
+	var l, n, ymin, ymax, err
 
-	y = img.r.y0
-	while y != img.r.y1
+	l = 0
+	ymin = img.r.y0
+	while ymin != img.r.y1
 		if buf.len < 24
-			-> false
+			-> -1
 		;;
 		err = false
-		dy = getint(buf[:12], &err)
+		ymax = getint(buf[:12], &err)
 		n = getint(buf[12:24], &err)
 		if err
-			-> false
+			-> -1
 		;;
+		l += 24
 		buf = buf[24:]
 		pack(dpy, "biiiiid", (n : std.size), \
 			('Y' : byte), \
 			img.id, \
 			img.r.x0, \
-			y, \
+			ymin, \
 			img.r.x1, \
-			y + dy, \
+			ymax, \
 			buf[:n])
-		y += dy
+		buf = buf[n:]
+		ymin = ymax
+		l += n
 	;;
-	-> true
+	-> (l : std.size)
 }
 
 const loadraw = {dpy, img, buf
 	var chunk, btp, btl
-	var n, r, dx, dy
+	var l, n, r, dx, dy
 
+	l = 0
 	r = img.r
 	dx = r.x1 - r.x0
 	btp = (chandepth(img.chan) / 8 : int)
@@ -83,10 +105,11 @@ const loadraw = {dpy, img, buf
 			r.x1, \
 			r.y0 + dy, \
 			buf[:n])
+		l += n
 		buf = buf[n:]
 		r.y0 += dy
 	;;
-	-> true
+	-> (l : std.size)
 }
 
 const parsehdr = {buf, chanp, rectp, compressedp, bufp
@@ -126,19 +149,3 @@ const parsefmt = {buf, chanp, rectp
 	-> !err
 }
 
-/*
-const readall = {fd, buf
-	var n
-
-	n = 0
-	while n < buf.len
-		match std.read(fd, buf[n:])
-		| `std.Err e:	-> false
-		| `std.Ok 0:	-> n == buf.len
-		| `std.Ok l:
-			n += l
-		;;
-	;;
-	-> true
-}
-*/

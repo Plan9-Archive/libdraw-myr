@@ -2,22 +2,27 @@ use std
 use bio
 
 use "types"
+use "image"
+use "load"
 
 pkg draw =
 	const openfont	: (dpy : display#, name : byte[:] -> std.result(font#, err))
 ;;
 
 const openfont = {dpy, name
+	var dir
+
+	dir = std.dirname(name)
 	match bio.open(name, bio.Rd)
-	| `std.Ok f:	-> load(dpy, f)
+	| `std.Ok f:	-> loadfont(dpy, dir, f)
 	| `std.Err e:	-> `std.Err `Efont
 	;;
 }
 
-const load = {dpy, f
+const loadfont = {dpy, dir, f
 	var sp : byte[:][3]
 	var lo, hi, start, n
-	var font, subf
+	var font
 
 	font = std.zalloc()
 	match bio.readln(f)
@@ -38,12 +43,71 @@ const load = {dpy, f
 		if sp.len == 4
 			start = std.getv(std.intparse(sp[n++]), -1)
 		;;
-		subf = loadsubfont(sp[n], lo, hi, start)
-		std.slpush(&font.subf, subf)
+		match loadsubfont(dpy, dir, sp[n], lo, hi, start)
+		| `std.Ok subf:
+			std.slpush(&font.subf, subf)
+		| `std.Err e:
+		//	freefont(font)
+		;;
 	;;
 	-> `std.Ok font
 }
 
-const loadsubfont = {name, lo, hi, start
-	-> std.zalloc()
+const loadsubfont = {dpy, dir, name, lo, hi, start
+	var path, font, r
+
+	path = std.pathcat(dir, name)
+	match std.slurp(path)
+	| `std.Err e:
+		r = `std.Err `Eio
+	| `std.Ok buf:
+		match xload(dpy, buf)
+		| `std.Ok (img, off):
+			match readglyphs(buf[off:])
+			| `std.Ok gd:
+				font = std.zalloc()
+				font.img = img
+				font.glyph = gd
+				r = `std.Ok font
+			| `std.Err e:
+				r = `std.Err e
+			;;
+		| `std.Err e:
+			r = `std.Err e
+		;;
+		std.slfree(buf)
+	;;
+	-> r
+}
+
+const readglyphs = {glyphdata
+	var sp : byte[:][3]
+	var n, height, ascent, err
+	var gd, g
+
+	if glyphdata.len < 3*12 || std.bstrtok(sp[:], glyphdata[:3*12]).len != 3
+		-> `std.Err `Efmt
+	;;
+
+	err = false
+	n = getint(sp[0], &err)
+	height = getint(sp[1], &err)
+	ascent = getint(sp[2], &err)
+	glyphdata = glyphdata[3*12:]
+	if err || glyphdata.len < n
+		-> `std.Err `Efmt
+	;;
+
+	gd = [][:]
+	for var i = 0; i < n; i++
+		g = [
+			.x=std.getle16(glyphdata[6*i+0 : 6*i+2]),
+			.top=(glyphdata[6*i + 2] : int),
+			.bottom=(glyphdata[6*i + 3] : int),
+			.width=(glyphdata[6*i + 4] : int),
+			.height=(glyphdata[6*i + 5] : int),
+		]
+		std.slpush(&gd, g)
+	;;
+	-> `std.Ok gd
 }

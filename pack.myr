@@ -1,4 +1,5 @@
 use std
+use sys
 
 use "types"
 
@@ -89,6 +90,7 @@ const flush = {dpy
 		
 const flushbuf = {dpy
 	var off, ret
+	var errbuf : byte[128]
 
 	off = 0
 	ret = true
@@ -96,7 +98,8 @@ const flushbuf = {dpy
 		match std.write(dpy.fd, dpy.buf[off:dpy.bufoff])
 		| `std.Ok n:	off += n
 		| `std.Err e:
-			std.put("**error\n")
+			sys.errstr(errbuf[:])
+			std.fatal("**error: {}\n", std.cstrconv(errbuf[:]))
 			ret = false
 			break
 		;;

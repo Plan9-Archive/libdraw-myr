@@ -51,6 +51,15 @@ pkg draw =
 		hi	: char
 		start	: std.size
 		img	: image#
+		glyph	: glyph[:]
+	;;
+
+	type glyph = struct
+		x	: int
+		width	: int
+		height	: int
+		top	: int
+		bottom	: int
 	;;
 
 	type screen = struct
