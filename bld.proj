@@ -1,4 +1,5 @@
 lib draw =
+	init.myr
 	draw.myr
 	types.myr
 	chan.myr
@@ -6,7 +7,6 @@ lib draw =
 	load.myr
 	image.myr
 	pack.myr
-	shape.myr
 ;;
 
 bin testdraw =

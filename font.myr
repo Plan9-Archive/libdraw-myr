@@ -99,7 +99,7 @@ const readglyphs = {glyphdata
 	;;
 
 	gd = [][:]
-	for var i = 0; i < n; i++
+	for var i = 0; i <= n; i++
 		g = [
 			.x=std.getle16(glyphdata[6*i+0 : 6*i+2]),
 			.top=(glyphdata[6*i + 2] : int),
