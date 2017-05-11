@@ -7,10 +7,6 @@ const main = {
 	match draw.open()
 	| `std.Err e:	std.fatal("error: {}\n", e)
 	| `std.Ok dpy:
-		std.put("{}\n", std.getpid())
-		std.put("root.r: {}\n", dpy.root.r)
-		draw.flush(dpy)
-		//draw.getwindow(dpy, draw.Refnone)
 		testpattern(dpy)
 		draw.flush(dpy)
 		std.read(std.In, b[:])
@@ -21,8 +17,11 @@ const main = {
 const testpattern = {dpy
 	var w, r
 
-	w = dpy.win
+
+	match draw.getwindow(dpy, draw.Refnone)
+	| `std.Ok win:	w = win
+	| `std.Err e:	-> std.fatal("could not get window: {}\n", e);
+	;;
 	r = [.x0=w.r.x0+100, .y0=w.r.y0+100, .x1=w.r.x0+200, .y1=w.r.y0+200]
-	std.put("rect: {}\n", r)
 	draw.fill(w, dpy.black, r)
 }

@@ -17,7 +17,6 @@ pkg draw =
 		scrid	: int32
 
 		root	: image#
-		win	: image#
 		screen	: screen#
 		dfont	: font#
 		buf	: byte[:]

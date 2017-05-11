@@ -1,0 +1,27 @@
+use std
+use draw
+
+const main = {args : byte[:][:]
+	var img, dpy, w
+	var b : byte[1]
+
+	dpy = std.try(draw.open())
+	for a in args[1:]
+		match std.slurp(a)
+		| `std.Err e:	std.fatal("could not open {}: {}\n", a, e)
+		| `std.Ok buf:
+			match draw.xload(dpy, buf)
+			| `std.Ok (i, _):	img = i
+			| `std.Err e:	std.fatal("could not load image {}: {}\n", a, e)
+			;;
+			match draw.getwindow(dpy, draw.Refnone)
+			| `std.Ok win:	w = win
+			| `std.Err e:	-> std.fatal("could not get window: {}\n", e);
+			;;
+			draw.fill(w, img, w.r)
+			draw.flush(dpy)
+			std.read(std.In, b[:])
+		;;
+	;;
+	draw.close(dpy)
+}

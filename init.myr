@@ -10,6 +10,7 @@ use "draw"
 pkg draw =
 	const open	: (-> std.result(display#, err))
 	const close	: (dpy : display# -> void)
+	const getwindow	: (dpy : display#, ref : refresh -> std.result(image#, err))
 ;;
 
 const open = {
@@ -38,10 +39,7 @@ const open = {
 	dpy.black = genallocimage(dpy, 0, Refnone, dpy.root.chan, DBlack, true, r, clipr)
 	dpy.white = genallocimage(dpy, 0, Refnone, dpy.root.chan, DWhite, true, r, clipr)
 	dpy.opaque = genallocimage(dpy, 0, Refnone, dpy.root.chan, DOpaque, true, r, clipr)
-	match getwindow(dpy, Refnone)
-	| `std.Ok win:	dpy.win = win
-	| `std.Err e:	-> `std.Err e
-	;;
+
 
 	/* load up fonts */
 	font = std.getenvv("font", Dfont)
