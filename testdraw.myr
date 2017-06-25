@@ -15,7 +15,7 @@ const main = {
 }
 
 const testpattern = {dpy
-	var w, r
+	var w, r, p
 
 
 	match draw.getwindow(dpy, draw.Refnone)
@@ -24,4 +24,6 @@ const testpattern = {dpy
 	;;
 	r = [.x0=w.r.x0+100, .y0=w.r.y0+100, .x1=w.r.x0+200, .y1=w.r.y0+200]
 	draw.fill(w, dpy.black, r)
+	p = [.x=w.r.x0+100, .y=w.r.y0+210]
+	draw.string(dpy.dfont, w, "hello world", p, dpy.black)
 }

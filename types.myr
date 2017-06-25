@@ -25,6 +25,7 @@ pkg draw =
 		white	: image#
 		black	: image#
 		opaque	: image#
+		trans	: image#
 	;;
 
 	type err = union
@@ -42,15 +43,17 @@ pkg draw =
 		name	: byte[:]
 		height	: int
 		ascent	: int
-		subf	: subfont#[:]
+		subf	: subfont[:]
+		cache	: image#
 	;;
 
 	type subfont = struct
 		lo	: char
 		hi	: char
 		start	: std.size
-		img	: image#
-		glyph	: glyph[:]
+		path	: byte[:]
+		image	: std.option(image#)
+		glyph	: std.option(glyph[:])
 	;;
 
 	type glyph = struct
@@ -94,6 +97,29 @@ pkg draw =
 
 	const Zp	: point = [.x=0, .y=0]
 	const Dfont	: byte[:] = "/lib/font/bit/vga/unicode.font"
+
+	const CidxRed	: int = 0
+	const CidxGreen	: int = 1
+	const CidxBlue	: int = 2
+	const CidxGrey	: int = 3
+	const CidxAlpha	: int = 4
+	const CidxMap	: int = 5
+	const CidxIgnore	: int = 6
+
+	const GREY1	 : chan = 0x31
+	const GREY2	 : chan = 0x32
+	const GREY4	 : chan = 0x34
+	const GREY8	 : chan = 0x38
+	const CMAP8	 : chan = 0x58
+	const RGB15	 : chan = 0x61051525
+	const RGB16	 : chan = 0x51625
+	const RGB24	 : chan = 0x81828
+	const RGBA32	 : chan = 0x8182848
+	const ARGB32	 : chan = 0x48081828
+	const XRGB32	 : chan = 0x68081828
+	const BGR24	 : chan = 0x281808
+	const ABGR32	 : chan = 0x48281808
+	const XBGR32	 : chan = 0x68281808
 
 	/* Porter-Duff compositing operators */
 	const Clear	: drawop = 0

@@ -30,6 +30,11 @@ const pack = {dpy, fmt, vsz, args
 			var v : int32 = std.vanext(&ap)
 			std.putle32(b[o:o+4], v)
 			o += 4
+		| 'p':
+			var p : point = std.vanext(&ap)
+			std.putle32(b[o + 0:o + 4], p.x)
+			std.putle32(b[o + 4:o + 8], p.y)
+			o += 2*4
 		| 'r':
 			var r : rect = std.vanext(&ap)
 			std.putle32(b[o+ 0:o+ 4], r.x0)
@@ -40,8 +45,13 @@ const pack = {dpy, fmt, vsz, args
 		| 'S':
 			var s : byte[:] = std.vanext(&ap)
 			b[o] = (s.len : byte)
-			std.slcp(b[o+1:o+s.len+1], s)
 			o += s.len + 1
+		| 'I':
+			var s : int16[:] = std.vanext(&ap)
+			for var i = 0; i < s.len; i++
+				std.putle16(b[o:o+2], s[i])
+				o += 2
+			;;
 		| 'd':
 			var d : byte[:] = std.vanext(&ap)
 			std.slcp(b[o:o+d.len], d)

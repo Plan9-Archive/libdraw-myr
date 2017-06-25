@@ -40,8 +40,7 @@ const open = {
 	dpy.white = genallocimage(dpy, 0, Refnone, dpy.root.chan, DWhite, true, r, clipr)
 	dpy.opaque = genallocimage(dpy, 0, Refnone, dpy.root.chan, DOpaque, true, r, clipr)
 
-
-	/* load up fonts */
+	/* load up default font */
 	font = std.getenvv("font", Dfont)
 	match openfont(dpy, font)
 	| `std.Ok ft:	dpy.dfont = ft

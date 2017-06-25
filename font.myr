@@ -7,6 +7,9 @@ use "load"
 
 pkg draw =
 	const openfont	: (dpy : display#, name : byte[:] -> std.result(font#, err))
+
+	pkglocal const loadsubfont	: (dpy : display#, sub : subfont# -> void)
+	pkglocal const cachechar	: (font : font#, c : char -> int16)
 ;;
 
 const openfont = {dpy, name
@@ -19,9 +22,13 @@ const openfont = {dpy, name
 	;;
 }
 
+const cachechar = {ft, c
+	-> -1
+}
+
 const loadfont = {dpy, dir, f
 	var sp : byte[:][3]
-	var lo, hi, start, n
+	var lo, hi, start, n, r
 	var font
 
 	font = std.zalloc()
@@ -43,41 +50,41 @@ const loadfont = {dpy, dir, f
 		if sp.len == 4
 			start = std.getv(std.intparse(sp[n++]), -1)
 		;;
-		match loadsubfont(dpy, dir, sp[n], lo, hi, start)
-		| `std.Ok subf:
-			std.slpush(&font.subf, subf)
-		| `std.Err e:
-		//	freefont(font)
-		;;
+		std.slpush(&font.subf, [
+			.lo=lo,
+			.hi=hi,
+			.start=start,
+			.path=std.pathcat(dir, sp[n]),
+			.image=`std.None,
+			.glyph=`std.None,
+		])
 	;;
+
+	/* heuristic: probably big enough... */
+	r = [.x0 = 0, .y0 = 0, .x1 = 1000, .y1 = 10*font.ascent]
+	font.cache = genallocimage(dpy, 0, DTransparent, GREY8, DBlack, false, r, r)
 	-> `std.Ok font
 }
 
-const loadsubfont = {dpy, dir, name, lo, hi, start
-	var path, font, r
+const loadsubfont = {dpy, font
+	var buf
 
-	path = std.pathcat(dir, name)
-	match std.slurp(path)
-	| `std.Err e:
-		r = `std.Err `Eio
-	| `std.Ok buf:
-		match xload(dpy, buf)
-		| `std.Ok (img, off):
-			match readglyphs(buf[off:])
-			| `std.Ok gd:
-				font = std.zalloc()
-				font.img = img
-				font.glyph = gd
-				r = `std.Ok font
-			| `std.Err e:
-				r = `std.Err e
-			;;
-		| `std.Err e:
-			r = `std.Err e
-		;;
-		std.slfree(buf)
+	match std.slurp(font.path)
+	| `std.Err e:	std.fatal("could not open font {}: {}\n", font.path, e)
+	| `std.Ok b:	buf = b
 	;;
-	-> r
+
+	match xload(dpy, buf)
+	| `std.Err e:	std.fatal("could not load image {}: {}\n")
+	| `std.Ok (img, off):
+		match readglyphs(buf[off:])
+		| `std.Ok gd:
+			font.image = `std.Some img
+			font.glyph = `std.Some gd
+		| `std.Err e:
+			std.fatal("invalid glyph data in font {}\n", font.path)
+		;;
+	;;
 }
 
 const readglyphs = {glyphdata

@@ -14,6 +14,7 @@ pkg draw =
 	const allocimage	: (dpy : display#, r : rect, bg : color, repl : bool -> image#)
 	const allocscreen	: (dpy : display#, img : image#, fill : image#, public : bool -> screen#)
 	const allocwindow	: (dpy : display#, r : rect -> std.result(image#, err))
+	const freeimage		: (img : image# -> void)
 
 	/* general versions */
 	const genallocimage	: (dpy : display#, \
@@ -112,6 +113,11 @@ const allocimage = {dpy, r, color, repl
 	-> genallocimage(dpy, dpy.screen.id, Refnone, dpy.root.chan, color, repl, r, clipr)
 }
 
+const freeimage = {img
+	pack(img.dpy, "bi", 0, ('f' : byte), img.id)
+	std.free(img)
+}
+
 const allocscreen = {dpy, img, fill, public
 	var scr
 
@@ -152,7 +158,6 @@ const parseimgfmt = {img, info
 	;;
 	
 	img.repl = std.sleq("1", std.strstrip(info[Repl]))
-//	img.id = getint(info[Imgid], &err)
 	img.r.x0 = getint(info[Scrx0], &err)
 	img.r.y0 = getint(info[Scry0], &err)
 	img.r.x1 = getint(info[Scrx1], &err)
