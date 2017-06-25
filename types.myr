@@ -106,20 +106,20 @@ pkg draw =
 	const CidxMap	: int = 5
 	const CidxIgnore	: int = 6
 
-	const GREY1	: chan = 0x31
-	const GREY2	: chan = 0x32
-	const GREY4	: chan = 0x34
-	const GREY8	: chan = 0x38
-	const CMAP8	: chan = 0x58
-	const RGB15	: chan = 0x61051525
-	const RGB16	: chan = 0x51625
-	const RGB24	: chan = 0x81828
-	const RGBA32	: chan = 0x8182848
-	const ARGB32	: chan = 0x48081828
-	const XRGB32	: chan = 0x68081828
-	const BGR24	: chan = 0x281808
-	const ABGR32	: chan = 0x48281808
-	const XBGR32	: chan = 0x68281808
+	const Cgrey1	: chan = 0x31
+	const Cgrey2	: chan = 0x32
+	const Cgrey4	: chan = 0x34
+	const Cgrey8	: chan = 0x38
+	const Ccmap8	: chan = 0x58
+	const Crgb15	: chan = 0x61051525
+	const Crgb16	: chan = 0x51625
+	const Crgb24	: chan = 0x81828
+	const Crgba32	: chan = 0x8182848
+	const Cargb32	: chan = 0x48081828
+	const Cxrgb32	: chan = 0x68081828
+	const Cbgr24	: chan = 0x281808
+	const Cabgr32	: chan = 0x48281808
+	const Cxbgr32	: chan = 0x68281808
 
 	/* Porter-Duff compositing operators */
 	const Clear	: drawop = 0

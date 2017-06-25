@@ -62,7 +62,7 @@ const loadfont = {dpy, dir, f
 
 	/* heuristic: probably big enough... */
 	r = [.x0 = 0, .y0 = 0, .x1 = 1000, .y1 = 10*font.ascent]
-	font.cache = genallocimage(dpy, 0, DTransparent, GREY8, DBlack, false, r, r)
+	font.cache = genallocimage(dpy, 0, DTransparent, Cgrey8, DBlack, false, r, r)
 	-> `std.Ok font
 }
 
