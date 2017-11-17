@@ -44,8 +44,9 @@ const pack = {dpy, fmt, vsz, args
 			o += 4*4
 		| 'S':
 			var s : byte[:] = std.vanext(&ap)
-			b[o] = (s.len : byte)
-			o += s.len + 1
+			b[o++] = (s.len : byte)
+			std.slcp(b[o:o+s.len], s)
+			o += s.len
 		| 'I':
 			var s : int16[:] = std.vanext(&ap)
 			for var i = 0; i < s.len; i++
