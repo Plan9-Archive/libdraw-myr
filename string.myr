@@ -1,10 +1,39 @@
 use std
 use "types"
+use "font"
+use "pack"
 
 pkg draw =
-	const string	: (img : image#, text : byte[:], p : point, fill : image# -> void)
+	const string	: (dst : image#, dp : point, str : byte[:] -> void)
+	const gstring	: (dst : image#, dp : point, clipr : rect, src : image#, sp : point, ft : font#, str : byte[:] -> void)
 ;;
 
-const string = {img, text, p, fill
-	std.fatal("unimplemented text fill")
+const string = {dst, dp, str
+	gstring(dst, dp, dst.r, dst.dpy.black, [.x=0, .y=0], dst.dpy.dfont, str)	
+}
+
+const gstring = {dst, dp, clipr, src, sp, ft, str
+	var cids, id
+
+	cids = [][:]
+	for c : std.bychar(str)
+		id = cachechar(ft, c)
+		if id < 0
+			break
+		;;
+		std.slpush(&cids, id)
+	;;
+
+	/* s dstid[4] srcid[4] fontid[4] p[2*4] clipr[4*4] sp[2*4] n[2] n*(index[2]) */
+	pack(dst.dpy, "biiiprpsI", 2*cids.len, \
+		('s' : byte), \
+		dst.id, \
+		src.id, \
+		ft.cache.id, \
+		dp, \
+		clipr, \
+		sp, \
+		2*cids.len, \
+		cids)
+	std.slfree(cids)
 }

@@ -75,6 +75,7 @@ const fixsize = {fmt
 		| 's':	sz += 2
 		| 'i':	sz += 4
 		| 'r':	sz += 4*4
+		| 'p':	sz += 2*4
 		| _:	/* variable sizes */
 		;;
 	;;
