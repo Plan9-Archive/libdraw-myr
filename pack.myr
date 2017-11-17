@@ -4,7 +4,7 @@ use sys
 use "types"
 
 pkg draw =
-	const pack	: (dpy : display#, fmt : byte[:], vsz,  args : ... -> void)
+	const pack	: (dpy : display#, fmt : byte[:], vsz : std.size,  args : ... -> void)
 	const flush	: (dpy : display# -> bool)
 	const flushbuf	: (dpy : display# -> bool)
 ;;
@@ -17,7 +17,7 @@ const pack = {dpy, fmt, vsz, args
 	sz = fixsize(fmt) + vsz
 	b = ensure(dpy, sz)
 	o = 0
-	for c in fmt
+	for c : fmt
 		match (c : char)
 		| 'b':
 			b[o] = std.vanext(&ap)
@@ -68,7 +68,7 @@ const fixsize = {fmt
 	var sz
 
 	sz = 0
-	for c in fmt
+	for c : fmt
 		match (c : char)
 		| 'b':	sz += 1
 		| 's':	sz += 2

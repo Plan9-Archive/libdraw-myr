@@ -33,15 +33,15 @@ const loadfont = {dpy, dir, f
 
 	font = std.zalloc()
 	match bio.readln(f)
-	| `bio.Ok ln:
+	| `std.Ok ln:
 		std.bstrtok(sp[:2], ln)
 		font.height = std.getv(std.intparse(sp[0]), -1)
 		font.ascent = std.getv(std.intparse(sp[0]), -1)
-	| `bio.Eof:
-	| `bio.Err e:
+	| `std.Err `bio.Eof:
+	| `std.Err e:
 	;;
 
-	for ln in bio.byline(f)
+	for ln : bio.byline(f)
 		n = 0
 		start = 0
 		std.bstrtok(sp[:3], ln)
@@ -62,7 +62,7 @@ const loadfont = {dpy, dir, f
 
 	/* heuristic: probably big enough... */
 	r = [.x0 = 0, .y0 = 0, .x1 = 1000, .y1 = 10*font.ascent]
-	font.cache = genallocimage(dpy, 0, DTransparent, Cgrey8, DBlack, false, r, r)
+	font.cache = genallocimage(dpy, 0, Refnone, Cgrey8, DBlack, false, r, r)
 	-> `std.Ok font
 }
 

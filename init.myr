@@ -91,7 +91,7 @@ const getwindow = {dpy, ref
 
 	on = 0
 :retry
-	match std.open("/dev/winname", std.Ordonly)
+	match std.open("/dev/winname", std.Oread)
 	| `std.Ok f:	fd = f
 	| `std.Err e:	-> `std.Err `Ewin
 	;;
@@ -147,7 +147,7 @@ const iounit = {fd
 	var path
 
 	path = std.bfmt(buf[:], "#d/{}ctl", fd)
-	cfd = std.try(std.open(path, std.Ordonly))
+	cfd = std.try(std.open(path, std.Oread))
 	match std.read(cfd,buf[:])
 	| `std.Ok n:
 		std.bstrtok(args[:], buf[:n])

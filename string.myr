@@ -1,0 +1,10 @@
+use std
+use "types"
+
+pkg draw =
+	const string	: (img : image#, text : byte[:], p : point, fill : image# -> void)
+;;
+
+const string = {img, text, p, fill
+	std.fatal("unimplemented text fill")
+}
