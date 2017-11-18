@@ -29,11 +29,11 @@ const gstring = {dst, dp, clipr, src, sp, ft, str
 		('s' : byte), \
 		dst.id, \
 		src.id, \
-		ft.cache.id, \
+		ft.cimage.id, \
 		dp, \
 		clipr, \
 		sp, \
-		2*cids.len, \
+		cids.len, \
 		cids)
 	std.slfree(cids)
 }

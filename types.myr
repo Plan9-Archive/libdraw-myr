@@ -44,7 +44,15 @@ pkg draw =
 		height	: int
 		ascent	: int
 		subf	: subfont[:]
-		cache	: image#
+		cache	: std.htab(char, fcinfo)#
+		cimage	: image#
+		x	: int
+		nextidx	: int16
+	;;
+
+	type fcinfo = struct
+		hits	: int
+		idx	: int16
 	;;
 
 	type subfont = struct
@@ -52,16 +60,16 @@ pkg draw =
 		hi	: char
 		start	: std.size
 		path	: byte[:]
-		image	: std.option(image#)
-		glyph	: std.option(glyph[:])
+		image	: image#
+		glyph	: glyph[:]
 	;;
 
 	type glyph = struct
 		x	: int
-		width	: int
-		height	: int
 		top	: int
 		bottom	: int
+		left	: int
+		width	: int
 	;;
 
 	type screen = struct
