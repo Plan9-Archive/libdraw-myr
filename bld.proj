@@ -14,8 +14,3 @@ bin testdraw =
 	testdraw.myr
 	lib draw
 ;;
-
-bin testload =
-	testload.myr
-	lib draw
-;;
