@@ -10,6 +10,8 @@ pkg draw =
 		fd	: std.fd
 		ctlfd	: std.fd
 		refrfd	: std.fd
+		mousefd	: std.fd
+		kbdfd	: std.fd
 		ctldir	: int
 		windir	: byte[:]
 
