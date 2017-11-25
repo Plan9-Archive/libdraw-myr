@@ -27,7 +27,7 @@ const open = {
 	| `std.Err e:	-> `std.Err `Edpy
 	| `std.Ok 0:	-> `std.Err `Edpy
 	| `std.Ok n:	
-		match parseinfo(dpy, infobuf[:n])
+		match setup(dpy, infobuf[:n])
 		| `std.Ok void:
 		| `std.Err e: -> `std.Err e
 		;;
@@ -50,7 +50,7 @@ const open = {
 	-> `std.Ok dpy
 }
 
-const parseinfo = {dpy, infobuf
+const setup = {dpy, infobuf
 	var info : byte[:][Ninfo]
 	var buf	: byte[12*Ninfo]
 	var p
