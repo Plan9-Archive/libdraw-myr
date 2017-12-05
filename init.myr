@@ -1,4 +1,5 @@
 use std
+use thread
 
 use "types"
 use "chan"
@@ -6,6 +7,7 @@ use "font"
 use "image"
 use "pack"
 use "draw"
+use "event"
 
 pkg draw =
 	const open	: (-> std.result(display#, err))
@@ -46,7 +48,6 @@ const open = {
 	| `std.Ok ft:	dpy.dfont = ft
 	| `std.Err e:	-> `std.Err e
 	;;
-
 	-> `std.Ok dpy
 }
 
@@ -59,13 +60,22 @@ const setup = {dpy, infobuf
 		-> `std.Err `Edpy
 	;;
 	p = std.bfmt(buf[:], "/dev/draw/{}/data", info[0])
-	dpy.fd = std.try(std.open(p, std.Ordwr | std.Ocexec))
+	dpy.datafd = std.try(std.open(p, std.Ordwr | std.Ocexec))
+
+	/* open device fds */
 	p = std.bfmt(buf[:], "/dev/draw/{}/refresh", info[0])
+	dpy.qmtx = thread.mkmtx()
 	dpy.refrfd = std.try(std.open(p, std.Ordwr | std.Ocexec))
+	dpy.mousefd = std.try(std.open("/dev/mouse", std.Ordwr | std.Ocexec))
+	dpy.kbdfd = std.try(std.open("/dev/kbd", std.Ordwr | std.Ocexec))
+	thread.spawn({; mouseproc(dpy)})
+	thread.spawn({; kbdproc(dpy)})
+	thread.spawn({; refrproc(dpy)})
+
 
 	/* parse out root image properties */
 	dpy.ctldir = std.get(std.intparse(info[0]))
-	dpy.buf = std.slalloc(iounit(dpy.fd) + 5)	/* slop for flush */
+	dpy.buf = std.slalloc(iounit(dpy.datafd) + 5)	/* slop for flush */
 	dpy.root = std.zalloc()
 	parseimgfmt(dpy.root, info[:])
 
@@ -132,8 +142,10 @@ const close = {dpy
 //	freeimage(dpy.root)
 	std.slfree(dpy.buf)
 	std.close(dpy.ctlfd)
+	std.close(dpy.datafd)
 	std.close(dpy.refrfd)
-	std.close(dpy.fd)
+	std.close(dpy.mousefd)
+	std.close(dpy.kbdfd)
 	std.free(dpy)
 }
 

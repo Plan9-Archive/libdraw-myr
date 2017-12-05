@@ -3,13 +3,25 @@ use draw
 
 const main = {
 	var b : byte[0]
+	var ev
 
 	match draw.open()
 	| `std.Err e:	std.fatal("error: {}\n", e)
 	| `std.Ok dpy:
 		testpattern(dpy)
 		draw.flush(dpy)
-		std.read(std.In, b[:])
+		while true
+			ev =  draw.event(dpy)#
+			match ev
+			| `draw.Mmove _:
+			| `draw.Mdown _:
+			| `draw.Mup _:
+			| `draw.Kp 'q':
+				break
+			| _:
+				std.put("ev: {}\n", ev)
+			;;
+		;;
 		draw.close(dpy)
 	;;
 }

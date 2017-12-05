@@ -107,7 +107,7 @@ const flushbuf = {dpy
 	off = 0
 	ret = true
 	while off != dpy.bufoff
-		match std.write(dpy.fd, dpy.buf[off:dpy.bufoff])
+		match std.write(dpy.datafd, dpy.buf[off:dpy.bufoff])
 		| `std.Ok n:	off += n
 		| `std.Err e:
 			sys.errstr(errbuf[:])

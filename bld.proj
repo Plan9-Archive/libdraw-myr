@@ -1,13 +1,14 @@
 lib draw =
-	init.myr
-	draw.myr
-	types.myr
 	chan.myr
+	draw.myr
+	event.myr
 	font.myr
-	load.myr
 	image.myr
+	init.myr
+	load.myr
 	pack.myr
 	string.myr
+	types.myr
 ;;
 
 bin testdraw =

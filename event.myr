@@ -1,0 +1,161 @@
+use std
+use sys
+use thread
+
+use "types"
+
+pkg draw =
+	const event	: (dpy : display# -> event#)
+
+	pkglocal const mouseproc	: (dpy : display# -> void)
+	pkglocal const kbdproc		: (dpy : display# -> void)
+	pkglocal const refrproc		: (dpy : display# -> void)
+;;
+
+const mouseproc = {dpy
+	var buf : byte[49]
+	var sp	: byte[:][5]
+	var ev : event#
+	var x, y
+
+	std.put("mouseproc\n")
+	while true
+		match std.read(dpy.mousefd, buf[:])
+		| `std.Ok 49:	/* got the message */
+		| `std.Ok _:	break
+		| `std.Err _:	break
+		;;
+
+		std.bstrtok(sp[:], buf[:])
+		x = std.getv(std.intparse(sp[1]), 0)
+		y = std.getv(std.intparse(sp[2]), 0)
+		match sp[0]
+		| "r":	ev = std.mk(`Resize)
+		| "m":	ev = std.mk(`Mmove (x, y))
+		| chr:	std.fatal("garbled mouse message")
+		;;
+		send(dpy, &dpy.mousep, ev)
+
+	;;
+}
+
+const kbdproc = {dpy
+	var buf : byte[128]
+	var ev : event#
+	var k, c, s
+
+	std.put("kbdproc\n")
+	while true
+		match std.read(dpy.kbdfd, buf[:])
+		| `std.Err e:	break
+		| `std.Ok 0:	break
+		| `std.Ok n:
+			std.put("{e}\n", buf[:n])
+			c = -1	
+			s = std.cstrconv(buf[:n])
+			(k, s) = std.charstep(s)
+			match k
+			| 'k':
+				while s.len > 0
+					(c, s) = std.charstep(s)
+					if c == 0
+						break
+					;;
+					std.put("got press: '{}'\n", c)
+					send(dpy, &dpy.kbdp, std.mk(`Kp c))
+				;;
+			| 'K':
+				while s.len > 0 && c != 0
+					(c, s) = std.charstep(s)
+					std.put("got release: '{}'\n", c)
+					send(dpy, &dpy.kbdp, std.mk(`Kr c))
+				;;
+			| 'c':
+				while s.len > 0 && c != 0
+					(c, s) = std.charstep(s)
+					std.put("got cons: '{}'\n", c)
+					send(dpy, &dpy.kbdp, std.mk(`Kp c))
+				;;
+			| _:
+				std.put("fail")
+			;;
+
+		;;
+	;;
+:fail
+}
+
+const refrproc = {dpy
+	var buf : byte[128]
+	var ev : event#
+
+	std.put("refrproc\n")
+	while true
+		std.read(dpy.refrfd, buf[:])
+		ev = std.mk(`Refresh)
+		send(dpy, &dpy.refrp, ev)
+
+	;;
+}
+
+const event = {dpy
+	var p, r
+
+	thread.mtxlock(&dpy.qmtx)
+	/* find tag for rendezvous */
+	for evp : [dpy.refrp, dpy.mousep, dpy.kbdp][:]
+		if evp != (0 : void#)
+			p = evp
+			goto found
+		;;
+	;;
+
+	/* if we couldn't find a tag, enqueue ourselves */
+	p = (dpy : void#)
+	for qp : [&dpy.refrp, &dpy.mousep, &dpy.kbdp][:]
+		qp# = p
+	;;
+:found
+	thread.mtxunlock(&dpy.qmtx)
+
+	r = (-1 : void#)
+	while r == (-1 : void#)
+		r = sys.rendezvous(p, (0 : void#))
+	;;
+
+	/* now dequeue */
+	thread.mtxlock(&dpy.qmtx)
+	for qp : [&dpy.refrp, &dpy.mousep, &dpy.kbdp][:]
+		if qp# == (dpy : void#)
+			qp# = (0 : void#)
+		;;
+	;;
+	thread.mtxunlock(&dpy.qmtx)
+	-> (r : event#)
+}
+
+const send = {dpy, qp, evp
+	var p, r
+
+	thread.mtxlock(&dpy.qmtx)
+	if qp# == (0 : void#)
+		/* nobody is queued; we enquue ourselves */
+		p = (qp : void#)
+		qp# = p
+	else
+		/* somebody is waiting, use their tag */
+		p = qp#
+		qp# = (0 : void#)
+	;;
+	thread.mtxunlock(&dpy.qmtx)
+	r = (-1 : void#)
+	while r == (-1 : void#)
+		r = sys.rendezvous(p, (evp : void#))
+	;;
+	/* now dequeue */
+	thread.mtxlock(&dpy.qmtx)
+	if qp# == (qp : void#)
+		qp# = (0 : void#)
+	;;
+	thread.mtxunlock(&dpy.qmtx)
+}

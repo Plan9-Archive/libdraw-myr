@@ -1,4 +1,5 @@
 use std
+use thread
 
 pkg draw =
 	type chan = uint32
@@ -6,12 +7,62 @@ pkg draw =
 	type refresh = uint32
 	type drawop = uint32
 
+	/* KF|1, KF|2, ..., KF|0xC is F1, F2, ..., F12 */
+	const KF	= 0xF000	/* Rune: beginning of private Unicode space */
+	const Spec	= 0xF800
+	const PF	= Spec|0x20	/* num pad function key */
+	const Kview	= Spec|0x00	/* view (shift window up) */
+	const Khome	= KF|0x0D
+	const Kup	= KF|0x0E
+	const Kdown	= Kview
+	const Kpgup	= KF|0x0F
+	const Kprint	= KF|0x10
+	const Kleft	= KF|0x11
+	const Kright	= KF|0x12
+	const Kpgdown	= KF|0x13
+	const Kins	= KF|0x14
+
+	const Kalt	= KF|0x15
+	const Kshift	= KF|0x16
+	const Kctl	= KF|0x17
+
+	const Kend	= KF|0x18
+	const Kscroll	= KF|0x19
+	const Kscrolloneup	= KF|0x20
+	const Kscrollonedown	= KF|0x21
+
+	const Ksoh	= 0x01
+	const Kstx	= 0x02
+	const Ketx	= 0x03
+	const Keof	= 0x04
+	const Kenq	= 0x05
+	const Kack	= 0x06
+	const Kbs	= 0x08
+	const Knack	= 0x15
+	const Ketb	= 0x17
+	const Kdel	= 0x7f
+	const Kesc	= 0x1b
+
+	const Kbreak	= Spec|0x61
+	const Kcaps	= Spec|0x64
+	const Knum	= Spec|0x65
+	const Kmiddle	= Spec|0x66
+	const Kaltgr	= Spec|0x67
+	const Kmouse	= Spec|0x100
+
 	type display = struct
-		fd	: std.fd
+		datafd	: std.fd
 		ctlfd	: std.fd
+
+		/* inputs */
+		qmtx	: thread.mutex
 		refrfd	: std.fd
 		mousefd	: std.fd
 		kbdfd	: std.fd
+		refrp	: void#
+		mousep	: void#
+		kbdp	: void#
+
 		ctldir	: int
 		windir	: byte[:]
 
@@ -28,6 +79,16 @@ pkg draw =
 		black	: image#
 		opaque	: image#
 		trans	: image#
+	;;
+
+	type event = union
+		`Kp char
+		`Kr char
+		`Mmove	(int, int)
+		`Mdown	int
+		`Mup	int
+		`Resize	
+		`Refresh
 	;;
 
 	type err = union
