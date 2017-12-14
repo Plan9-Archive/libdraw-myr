@@ -56,6 +56,7 @@ pkg draw =
 
 		/* inputs */
 		qmtx	: thread.mutex
+		rawevt	: bool
 		refrfd	: std.fd
 		mousefd	: std.fd
 		kbdfd	: std.fd
@@ -85,8 +86,8 @@ pkg draw =
 		`Kp char
 		`Kr char
 		`Mmove	(int, int)
-		`Mdown	int
-		`Mup	int
+		`Mdown	(int, int, int)
+		`Mup	(int, int, int)
 		`Resize	
 		`Refresh
 	;;
@@ -245,6 +246,7 @@ pkg draw =
 	const DNotacolor	: color =  0xFFFFFF00
 	const DNofill		: color =  DNotacolor
 
+	/* rio expects us to reserve space for the border */
 	const Borderwidth	: int	= 4
 
 ;;

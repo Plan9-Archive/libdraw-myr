@@ -16,9 +16,9 @@ const mouseproc = {dpy
 	var buf : byte[49]
 	var sp	: byte[:][5]
 	var ev : event#
-	var x, y
+	var x, y, b, o
 
-	std.put("mouseproc\n")
+	o = -1
 	while true
 		match std.read(dpy.mousefd, buf[:])
 		| `std.Ok 49:	/* got the message */
@@ -29,13 +29,24 @@ const mouseproc = {dpy
 		std.bstrtok(sp[:], buf[:])
 		x = std.getv(std.intparse(sp[1]), 0)
 		y = std.getv(std.intparse(sp[2]), 0)
+		b = std.getv(std.intparse(sp[3]), 0)
+		if o < 0
+			o = b
+		;;
 		match sp[0]
 		| "r":	ev = std.mk(`Resize)
 		| "m":	ev = std.mk(`Mmove (x, y))
 		| chr:	std.fatal("garbled mouse message")
 		;;
 		send(dpy, &dpy.mousep, ev)
-
+		if b > o
+			ev = std.mk(`Mdown (x, y, b))
+			send(dpy, &dpy.mousep, ev)
+		elif b < o
+			ev = std.mk(`Mup (x, y, b))
+			send(dpy, &dpy.mousep, ev)
+		;;
+		o = b
 	;;
 }
 
@@ -44,40 +55,36 @@ const kbdproc = {dpy
 	var ev : event#
 	var k, c, s
 
-	std.put("kbdproc\n")
 	while true
 		match std.read(dpy.kbdfd, buf[:])
 		| `std.Err e:	break
 		| `std.Ok 0:	break
 		| `std.Ok n:
-			std.put("{e}\n", buf[:n])
 			c = -1	
 			s = std.cstrconv(buf[:n])
 			(k, s) = std.charstep(s)
 			match k
-			| 'k':
-				while s.len > 0
+			| 'k':	/* drop */
+				while s.len > 0 && c != 0
 					(c, s) = std.charstep(s)
-					if c == 0
-						break
+					if dpy.rawevt
+						send(dpy, &dpy.kbdp, std.mk(`Kp c))
 					;;
-					std.put("got press: '{}'\n", c)
-					send(dpy, &dpy.kbdp, std.mk(`Kp c))
 				;;
 			| 'K':
 				while s.len > 0 && c != 0
 					(c, s) = std.charstep(s)
-					std.put("got release: '{}'\n", c)
-					send(dpy, &dpy.kbdp, std.mk(`Kr c))
+					if dpy.rawevt
+						send(dpy, &dpy.kbdp, std.mk(`Kr c))
+					;;
 				;;
 			| 'c':
 				while s.len > 0 && c != 0
 					(c, s) = std.charstep(s)
-					std.put("got cons: '{}'\n", c)
 					send(dpy, &dpy.kbdp, std.mk(`Kp c))
 				;;
 			| _:
-				std.put("fail")
+				std.die("fail")
 			;;
 
 		;;
@@ -89,7 +96,6 @@ const refrproc = {dpy
 	var buf : byte[128]
 	var ev : event#
 
-	std.put("refrproc\n")
 	while true
 		std.read(dpy.refrfd, buf[:])
 		ev = std.mk(`Refresh)

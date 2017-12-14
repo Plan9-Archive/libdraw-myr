@@ -2,7 +2,6 @@ use std
 use draw
 
 const main = {
-	var b : byte[0]
 	var ev
 
 	match draw.open()
@@ -11,16 +10,17 @@ const main = {
 		testpattern(dpy)
 		draw.flush(dpy)
 		while true
-			ev =  draw.event(dpy)#
-			match ev
+			ev =  draw.event(dpy)
+			match ev#
 			| `draw.Mmove _:
-			| `draw.Mdown _:
-			| `draw.Mup _:
+			| `draw.Mdown (x, y, mask):	std.put("click {} at {}\n", mask, (x, y))
+			| `draw.Mup (x, y, mask):	std.put("release {} at {}\n", mask, (x, y))
 			| `draw.Kp 'q':
 				break
 			| _:
 				std.put("ev: {}\n", ev)
 			;;
+			std.free(ev)
 		;;
 		draw.close(dpy)
 	;;
