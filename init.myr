@@ -1,5 +1,6 @@
 use std
 use thread
+use sys
 
 use "types"
 use "chan"
@@ -54,6 +55,7 @@ const open = {
 const setup = {dpy, infobuf
 	var info : byte[:][Ninfo]
 	var buf	: byte[12*Ninfo]
+	var mp, kp, rp
 	var p
 
 	if std.bstrtok(info[:], infobuf).len != Ninfo
@@ -68,9 +70,13 @@ const setup = {dpy, infobuf
 	dpy.refrfd = std.try(std.open(p, std.Ordwr | std.Ocexec))
 	dpy.mousefd = std.try(std.open("/dev/mouse", std.Ordwr | std.Ocexec))
 	dpy.kbdfd = std.try(std.open("/dev/kbd", std.Ordwr | std.Ocexec))
-	thread.spawn({; mouseproc(dpy)})
-	thread.spawn({; kbdproc(dpy)})
-	thread.spawn({; refrproc(dpy)})
+	mp = std.try(thread.spawn({; mouseproc(dpy)}))
+	kp = std.try(thread.spawn({; kbdproc(dpy)}))
+	rp = std.try(thread.spawn({; refrproc(dpy)}))
+
+	sys.atexit(std.fndup({; kill(mp)}))
+	sys.atexit(std.fndup({; kill(kp)}))
+	sys.atexit(std.fndup({; kill(rp)}))
 
 
 	/* parse out root image properties */
@@ -169,4 +175,11 @@ const iounit = {fd
 	;;
 	std.close(cfd);
 	-> ret
+}
+
+const kill = {pid
+	match std.open(std.fmt("/proc/{}/note", pid), std.Owrite)
+	| `std.Ok fd:	std.write(fd, "kill")
+	| `std.Err e:	/* already gone */
+	;;
 }
