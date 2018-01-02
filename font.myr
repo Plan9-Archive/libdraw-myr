@@ -1,5 +1,6 @@
 use std
 use bio
+use iter
 
 use "types"
 use "image"
@@ -38,7 +39,7 @@ const loadglyph = {ft, c
 	var p : point
 	var g, info
 
-	for sub : std.byref(ft.subf)
+	for sub : iter.byref(ft.subf)
 		if c < sub.lo || c >= sub.hi
 			continue
 		;;
