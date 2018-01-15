@@ -27,7 +27,7 @@ pkg draw =
 					clipr : rect \
 					-> image#)
 
-	pkglocal generic getint	: (str : byte[:], errp : bool# -> @a::(integral,numeric))
+	pkglocal generic getint	: (str : byte[:], errp : bool# -> @a) :: integral,numeric @a
 ;;
 
 const Ninfo	= 12
@@ -172,7 +172,7 @@ const parseimgfmt = {img, info
 	-> `std.Ok img
 }
 
-generic getint = {str, errp -> @a::(integral,numeric)
+generic getint = {str, errp -> @a :: integral,numeric @a
 	match std.intparse(std.strstrip(str))
 	| `std.Some n:	-> n
 	| `std.None:	errp# = true
