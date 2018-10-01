@@ -131,6 +131,7 @@ const getwindow = {dpy, ref
 				on = n
 				goto retry
 			;;
+			-> `std.Err `Edpy
 		;;
 	;;
 	r = inset(img.r, Borderwidth)
